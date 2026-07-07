@@ -1,0 +1,30 @@
+# Lean build artifacts
+.lake/
+build/
+lake-packages/
+
+
+verify.bat
+PRESe.md
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+*.egg-info/
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
