@@ -78,6 +78,41 @@ Ten propositional logic theorems proven in Lean 4, covering:
 
 A bank transfer system verified in both Python and Lean 4.
 
+### The Demonstration: Testing vs. Verification
+
+**Key files:**
+- `python_impl.py` — contains `transfer()` (correct) and `transfer_buggy()` (buggy)
+- `tests.py` — shows tests passing on buggy code
+- `LeanImpl.lean` — shows Lean refusing to prove buggy code
+
+#### Run the demonstration:
+
+```bash
+# Show the bug visually (money disappearing)
+python task-2-case-study/python_impl.py
+
+# Run tests — see transfer_buggy() pass 5 tests, fail only the specific exposure test
+python task-2-case-study/tests.py
+
+# Verify Lean catches it at compile time
+lake env lean task-2-case-study/LeanImpl.lean
+```
+
+### What the Bug Does
+
+`transfer_buggy()` uses integer division (`//`) instead of subtraction (`-=`):
+
+```python
+sender.balance = sender.balance // amount   # BUG
+```
+
+**Example:** transfer(sender=10, receiver=0, amount=3)
+- Buggy version: sender becomes 10÷3=3, receiver becomes 3 → total=6 (lost $4)
+- Tests pass: only fails on inputs developers don't typically test
+
+**Lean catches it:** The proof of money conservation fails to compile because
+`s / amt + (r + amt) ≠ s + r` mathematically.
+
 ### Properties Proven in Lean
 
 | Property | Guarantee |
