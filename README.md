@@ -1,138 +1,208 @@
 # Formal Verification with Lean 4
 
-An assignment demonstrating formal verification — the practice of mathematically
-proving that code is correct for *all* possible inputs, not just tested ones.
+> Testing proves that specific inputs worked.
+> Formal verification proves that every possible input works.
+
+This project demonstrates that difference through two tasks: propositional logic
+proofs and a verified bank transfer system — including a realistic bug that
+passes all 12 unit tests but is caught by Lean before a single line executes.
+
+---
 
 ## Repository Structure
 
 ```
 MyLeanProject/
 ├── task-1-logic-proofs/
-│   └── Logic.lean          # 10 propositional logic proofs
+│   └── Logic.lean           
 └── task-2-case-study/
-    ├── LeanImpl.lean        # Formally verified bank transfer
-    ├── python_impl.py       # Python implementation
-    ├── tests.py             # 12 unit tests (pytest/unittest)
-    └── CASE_STUDY.md        # Analysis and comparison
+    ├── python_impl.py         
+    ├── tests.py               
+    ├── LeanImpl.lean          
+    └── CASE_STUDY.md          
 ```
 
-## What is Formal Verification?
+---
 
-Traditional testing checks a finite number of examples:
+## The Core Idea
+
+Traditional testing:
 
 ```python
-assert transfer(100, 50, 30) == True   # one case
-assert transfer(20, 50, 30)  == False  # another case
+assert transfer(100, 50, 30) == True    # one case checked
+assert transfer(20,  50, 30) == False   # another case checked
+# ... but infinitely many cases remain unchecked
 ```
 
-Formal verification proves correctness mathematically for *every* possible input:
+Formal verification in Lean 4:
 
 ```lean
-theorem transfer_conserves_money (s r : Account) (amt : Nat) : ...
--- holds for all 2^64 × 2^64 × 2^64 possible combinations
+theorem transfer_preserves_total (s r : Account) (amt : Nat) :
+    match transfer s r amt with
+    | none          => True
+    | some (s', r') => totalMoney s' r' = totalMoney s r
+-- proven for ∀ s r amt : Nat — every possible input, simultaneously
 ```
+
+The theorem is not run against inputs. It is proven. The Lean kernel checks
+every logical step and either accepts the proof or rejects the file.
+If the implementation violates the property, the file does not compile.
+
+---
 
 ## Quick Start
 
-### Lean 4
+**Prerequisites:** [Lean 4 via elan](https://github.com/leanprover/elan) · Python 3.x
 
-Install Lean 4 via [elan](https://github.com/leanprover/elan):
-
+**Verify everything at once:**
 ```bash
-curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh
+.\verify.bat          # Windows
 ```
 
-Verify the proofs:
-
+**Or individually:**
 ```bash
+# Lean proofs
 lake build
-```
-
-Or open any `.lean` file in VS Code with the Lean 4 extension installed.
-
-### Python
-
-```bash
-python task-2-case-study/python_impl.py   # run demo
-python -m pytest task-2-case-study/tests.py -v  # run tests
-```
-
-## Task 1: Logic Proofs
-
-Ten propositional logic theorems proven in Lean 4, covering:
-
-| Theorem | Concept |
-|---------|---------|
-| T51 | Conjunction introduction |
-| T52 | Modus ponens via conjunction |
-| T53 | Implication chain |
-| T54 | Weakening |
-| T55 | Modus tollens |
-| T56 | Argument permutation |
-| T57 | Disjunction weakening |
-| T58 | Complex contradiction |
-| T59 | Identity |
-| T510 | Law of non-contradiction |
-
-## Task 2: Bank Transfer Case Study
-
-A bank transfer system verified in both Python and Lean 4.
-
-### The Demonstration: Testing vs. Verification
-
-**Key files:**
-- `python_impl.py` — contains `transfer()` (correct) and `transfer_buggy()` (buggy)
-- `tests.py` — shows tests passing on buggy code
-- `LeanImpl.lean` — shows Lean refusing to prove buggy code
-
-#### Run the demonstration:
-
-```bash
-# Show the bug visually (money disappearing)
-python task-2-case-study/python_impl.py
-
-# Run tests — see transfer_buggy() pass 5 tests, fail only the specific exposure test
-python task-2-case-study/tests.py
-
-# Verify Lean catches it at compile time
+lake env lean task-1-logic-proofs/Logic.lean
 lake env lean task-2-case-study/LeanImpl.lean
+
+# Python
+python task-2-case-study/python_impl.py     # run demo
+python task-2-case-study/tests.py           # run 12 tests
 ```
 
-### What the Bug Does
+---
 
-`transfer_buggy()` uses integer division (`//`) instead of subtraction (`-=`):
+## Task 1 — Propositional Logic Proofs
+
+Ten theorems proven in Lean 4 using tactics such as `intro`, `exact`,
+`constructor`, `cases`, and `omega`. Each proof is commented to show the
+reasoning strategy.
+
+| Theorem | Statement | Key Tactic |
+|---------|-----------|------------|
+| T51 | `P, P→Q ⊢ P∧Q` | `constructor` |
+| T52 | `P∧Q→R, Q→P, Q ⊢ R` | `apply` + `constructor` |
+| T53 | `P→Q, Q→R ⊢ P→(Q∧R)` | `intro` + `constructor` |
+| T54 | `P ⊢ Q→P` | weakening via `intro _` |
+| T55 | `P→Q, ¬Q ⊢ ¬P` | modus tollens |
+| T56 | `P→(Q→R) ⊢ Q→(P→R)` | argument permutation |
+| T57 | `P∨(Q∧R) ⊢ P∨Q` | `cases` + projection |
+| T58 | complex hypotheses `⊢ ¬L` | contradiction via `have` |
+| T59 | `⊢ P→P` | identity |
+| T510 | `⊢ ¬(P∧¬P)` | law of non-contradiction |
+
+All 10 compile with zero `sorry` placeholders and zero warnings.
+
+---
+
+## Task 2 — Bank Transfer Case Study
+
+### The Bug
+
+`transfer_buggy()` in `python_impl.py` contains a realistic logic error:
+a processing fee is deducted from the sender but not credited anywhere,
+so money leaks from the system on every transaction.
 
 ```python
-sender.balance = sender.balance // amount   # BUG
+FEE = 2
+def transfer_buggy(sender, receiver, amount):
+    sender.balance -= (amount + FEE)   # sender charged amount + fee
+    receiver.balance += amount          # receiver gets only amount
+    # FEE is gone
 ```
 
-**Example:** transfer(sender=10, receiver=0, amount=3)
-- Buggy version: sender becomes 10÷3=3, receiver becomes 3 → total=6 (lost $4)
-- Tests pass: only fails on inputs developers don't typically test
+### What Testing Says
 
-**Lean catches it:** The proof of money conservation fails to compile because
-`s / amt + (r + amt) ≠ s + r` mathematically.
+```
+python tests.py
 
-### Properties Proven in Lean
+  test_basic_transfer               ok
+  test_boundary_exact_balance       ok
+  test_boundary_one_under           ok
+  test_insufficient_balance         ok
+  test_large_transfer               ok
+  test_multiple_transfers_receiver  ok
+  test_negative_amount_rejected     ok
+  test_receiver_credited            ok
+  test_return_value_on_success      ok
+  test_sender_sufficient            ok
+  test_transfer_from_empty          ok
+  test_zero_amount_rejected         ok
 
-| Property | Guarantee |
-|----------|-----------|
-| Money conservation | Total balance never changes |
-| Non-negative balances | Structurally impossible to go negative |
-| Success condition | Succeeds iff `amount ≤ sender.balance` |
-| Correct updates | Sender loses and receiver gains exactly `amount` |
-| Safe failure | Failed transfers have no side effects |
+  12 passed — OK
+```
+
+Every test passes. The bug is invisible.
+
+### What Lean Says
+
+The `totalMoney` invariant is defined once and referenced by all proofs:
+
+```lean
+def totalMoney (a b : Account) : Nat := a.balance + b.balance
+```
+
+Attempting to prove `transfer_preserves_total` for `transfer_buggy`:
+
+```lean
+omega   -- ✗  must prove (s - (amt + 2)) + (r + amt) = s + r
+        --     simplifies to s + r - 2 = s + r  — false
+        --     Lean's kernel rejects this step
+        --     file does not compile
+```
+
+Proving it for the correct `transfer`:
+
+```lean
+omega   -- ✓  proves (s - amt) + (r + amt) = s + r
+        --     arithmetically true for all Nat
+        --     proof accepted
+```
+
+As long as the project requires `transfer_preserves_total` to be proved,
+`transfer_buggy` cannot satisfy the specification.
+The customer later reports `transfer(10, 0, 3)` — total drops from 10 to 8.
+Lean already knew.
+
+### Properties Proven (correct implementation)
+
+All six theorems hold for `∀ (s r : Account) (amt : Nat)`:
+
+| Theorem | What it guarantees |
+|---|---|
+| `transfer_preserves_total` | `totalMoney` is unchanged by any transfer |
+| `transfer_succeeds_iff` | Succeeds iff `amount ≤ sender.balance` — no ambiguity |
+| `transfer_updates_correctly` | Sender loses exactly `amount`, receiver gains exactly `amount` |
+| `balance_nonnegative` | All balances `≥ 0` — structural fact, not a runtime check |
+| `zero_transfer_noop` | Transferring zero leaves both accounts unchanged |
+| `sender_balance_decreases` | Sender cannot gain money by initiating a transfer |
 
 ### Testing vs. Verification
 
-| | Python Testing | Lean Verification |
+| | Python (12 tests) | Lean 4 (6 theorems) |
 |---|---|---|
-| Coverage | 12 specific cases | All possible inputs |
-| Guarantee | Confidence | Mathematical proof |
-| Runtime bugs | Possible | Proven absent |
-| Negative balances | Caught at runtime | Impossible by type |
+| Input coverage | 12 specific values | ∀ natural number |
+| Conservation property | Not tested — bug survives | Proven — buggy code rejected |
+| Negative balances | Runtime `ValueError` | Impossible by type (`Nat`) |
+| Bug detection timing | After customer reports it | At compile time |
+| Guarantee | "These inputs worked" | "Every input works" |
+
+---
 
 ## Key Takeaway
 
-Python tests are valuable but incomplete. Lean proofs are exhaustive by
-construction — if the proof compiles, the property holds unconditionally.
+The processing fee bug survived 12 carefully written tests. Lean refused to
+prove the conservation property for it because the implementation deducts more
+than it credits — violating the stated specification.
+
+That is the difference between testing and verification:
+testing checks examples, verification proves properties.
+
+---
+
+## Lean 4 Version
+
+```
+Lean 4.31.0 · Lake 5.0.0
+```
