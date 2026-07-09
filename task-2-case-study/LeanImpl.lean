@@ -52,7 +52,7 @@ def transfer_buggy (sender receiver : Account) (amount : Nat) : Option (Account 
 --     | none => True | some (s', r') => totalMoney s' r' = totalMoney s r := by
 --   simp only [totalMoney, FEE, transfer_buggy]
 --   by_cases h : 0 < amt ∧ amt + 2 ≤ s.balance <;> simp [h]
---   omega  -- ✗ fee leaks
+--   omega  --  fee leaks
 
 #eval transfer       { balance := 100 } { balance := 50 } 30  -- 150 → 150
 #eval transfer       { balance := 20  } { balance := 50 } 30  -- none
