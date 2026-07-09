@@ -1,7 +1,6 @@
 # Formal Verification with Lean 4
 
-Testing proves that specific inputs work. Formal verification proves that a
-property holds for every possible input allowed by the specification.
+Testing tells you what **didn't fail**. Formal verification tells you what **can't fail**.
 
 This project demonstrates the difference between traditional software testing
 and formal verification using Lean 4 through two tasks:
@@ -27,29 +26,34 @@ MyLeanProject/
 
 ---
 
-## The Core Idea
+## The Reliability Gap
 
-Traditional testing checks selected examples:
+### Why Testing Fails
+
+Testing tells you what **didn't fail** under specific conditions. It is like
+driving different size trucks across a bridge to check the bridge works fine —
+it doesn't guarantee the bridge won't collapse under a different weight tomorrow.
 
 ```python
-assert transfer(100, 50, 30) == True
-assert transfer(20,  50, 30) == False
+assert transfer(100, 50, 30) == True   # this truck crossed fine
+assert transfer(20,  50, 30) == False  # this one too
+# but infinitely many weights were never tried
 ```
 
-These tests only prove that the program behaves correctly for those inputs.
-Many other possible inputs remain unchecked.
+### The Power of Proofs
 
-Formal verification uses mathematical proofs:
+Proofs tell you what **can't fail**. Instead of crossing our fingers and hoping
+the code is safe, formal verification lets us write a mathematical proof that
+the computer checks. By translating the specification into machine-checkable
+logic, we eliminate the gap entirely.
 
 ```lean
-theorem transfer_preserves_total :
-    ∀ sender receiver amount,
-    successful_transfer_keeps_money_constant := by
-    ...
+theorem transfer_preserves_total (s r : Account) (amt : Nat) :
+    match transfer s r amt with
+    | some (s', r') => totalMoney s' r' = totalMoney s r
+-- not a test — a proof, checked for every possible input
 ```
 
-Instead of executing the program on examples, Lean checks a proof that the
-required property is always true according to the implementation and specification.
 If the implementation violates the specification, the Lean file fails to compile.
 
 ---
@@ -175,6 +179,7 @@ the theorem because the mathematical statement is false.
 
 | | Python Testing | Lean Verification |
 |---|---|---|
+| What it tells you | What **didn't fail** for these inputs | What **can't fail** for any input |
 | Coverage | Selected examples | All inputs satisfying assumptions |
 | Method | Execute test cases | Mathematical proof |
 | Bug detection | During testing or production | Before compilation |
@@ -184,12 +189,14 @@ the theorem because the mathematical statement is false.
 
 ## Conclusion
 
-The bank transfer example shows the difference between testing and verification.
-Python tests can demonstrate that many examples work, but they cannot examine
-every possible input. Lean 4 verifies the mathematical properties of the
-implementation. If the program violates the specification, the proof fails and
-the code cannot be accepted as verified. Formal verification provides stronger
-guarantees for software where correctness is critical.
+The bank transfer example shows the reliability gap in practice. Python tests
+demonstrated that 12 examples worked — but the bug survived, because testing
+tells you what didn't fail, not what can't fail.
+
+Lean 4 closes that gap for the properties it proves. If the program violates
+the specification, the proof fails and the code cannot be accepted as verified.
+Formal verification provides stronger guarantees for software where correctness
+is critical.
 
 ---
 

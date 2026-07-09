@@ -77,18 +77,18 @@ when features are added incrementally.
 Run `python tests.py` against `transfer_buggy()`:
 
 ```
-test_basic_transfer               ok
-test_boundary_exact_balance       ok
-test_boundary_one_under           ok
+test_basic_transfer_succeeds      ok
+test_receiver_credited_correctly  ok
+test_sender_has_less_after        ok
 test_insufficient_balance         ok
-test_large_transfer               ok
-test_multiple_transfers_receiver  ok
 test_negative_amount_rejected     ok
-test_receiver_credited            ok
-test_return_value_on_success      ok
-test_sender_sufficient            ok
-test_transfer_from_empty          ok
 test_zero_amount_rejected         ok
+test_transfer_from_empty          ok
+test_large_transfer               ok
+test_multiple_transfers           ok
+test_receiver_independent         ok
+test_exact_sufficient_balance     ok
+test_return_value_on_success      ok
 
 Ran 12 tests — OK
 ```

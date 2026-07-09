@@ -64,7 +64,7 @@ if __name__ == "__main__":
     transfer_buggy(a3, b3, 3)
     after3 = a3.balance + b3.balance
     print(f"  sender={a3.balance}  receiver={b3.balance}  total={after3}")
-    print(f"  Conservation: {total3} → {after3}  {'✓ OK' if total3 == after3 else f'✗  ${total3-after3} leaked'}")
+    print(f"  Conservation: {total3} → {after3}  {' OK' if total3 == after3 else f'  ${total3-after3} leaked'}")
     print("\n  Lean refused to prove totalMoney is preserved for transfer_buggy.")
     print("  The proof does not compile — bug caught before any code runs.")
     print("=" * 60)
